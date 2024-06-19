@@ -40,7 +40,7 @@ def add_note(notebook, notes):
             json.dump(notes, f)
         
         # Add the note to the notebook
-        note_content = tk.Text(notebook, width=40, height=10)
+        note_content = tk.Text(notebook, width=40, height=10, font=("TkDefaultFont", 25))
         note_content.insert(tk.END, content)
         notebook.forget(notebook.select())
         notebook.add(note_content, text=title)
@@ -58,7 +58,7 @@ def load_notes(notebook):
 
         for title, content in notes.items():
             # Add the note to the notebook
-            note_content = tk.Text(notebook, width=40, height=10)
+            note_content = tk.Text(notebook, width=40, height=10, font=("TkDefaultFont", 25))
             note_content.insert(tk.END, content)
             notebook.add(note_content, text=title)
 
@@ -115,3 +115,11 @@ def save_notes(notebook):
     with open('notes.json', 'w') as file:
         json.dump(data, file, indent=4)
         
+def get_text(tab_index, notebook):
+    current_tab = notebook.index(notebook.select())
+
+    content_widget = notebook.nametowidget(notebook.select())
+    
+    note_content = content_widget.get("1.0", tk.END)
+
+    return note_content

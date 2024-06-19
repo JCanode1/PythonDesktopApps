@@ -3,45 +3,103 @@ from tkinter import ttk, messagebox
 import json
 from ttkbootstrap import Style
 from tools import add_note, load_notes, save_notes, delete_note
+import markdown
+from tkhtmlview import HTMLLabel  # Import HTMLLabel from tkhtmlview
 
-def main():
-    # Create the main window
+# Global variable declaration
+frame_status = 1
+markdown_frame = None  # Declare the markdown_frame globally
+
+def show_markdown_frame(paned_window):
+    global frame_status, markdown_frame, root, notebook  # Declare root as global
+
+    if frame_status == 0:
+        # Hide frame and resize window to 500x500
+        paned_window.forget(markdown_frame)
+        root.geometry("500x500")
+        frame_status = 1
+    else:
+        if not markdown_frame:
+            # Create markdown frame only once
+            markdown_frame = ttk.Frame(paned_window, width=500, height=500)
+            markdown_frame.pack_propagate(False)
+            
+            # Example markdown content
+            markdown_content = """
+            # Markdown Preview
+            This is a preview of **Markdown** content.
+
+            - Item 1
+            - Item 2
+            - Item 3
+
+            [Link](https://example.com)
+            """
+
+            html_content = markdown.markdown(markdown_content)
+            html_label = HTMLLabel(markdown_frame, html=html_content)
+            html_label.pack(fill=tk.BOTH, expand=True)
+        
+        # Add the markdown frame to the paned_window if it's not already added
+        if not any(frame is markdown_frame for frame in paned_window.panes()):
+            paned_window.add(markdown_frame, weight=1)
+        
+        # Resize window to 1000x500
+        root.geometry("1000x500")
+        frame_status = 0
+
+def main(): 
+    global root, right_frame, frame_status, notebook  # Declare all global variables used
+    
     root = tk.Tk()
     root.title("Notes App")
-    root.geometry("500x500")
-    style = Style(theme='journal')
+    root.geometry("500x500")  # Initial window size to accommodate only the left frame
+    style = Style(theme='darkly')
     style = ttk.Style()
 
     # Configure the tab font to be bold
     style.configure("TNotebook.Tab", font=("TkDefaultFont", 14, "bold"))
 
+    # Create the PanedWindow to hold the frames
+    paned_window = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+    paned_window.pack(fill=tk.BOTH, expand=True)
+
+    # Create the frame for the notes and buttons
+    left_frame = ttk.Frame(paned_window, width=500, height=500)
+    left_frame.pack_propagate(False)
+    paned_window.add(left_frame, weight=1)
+
     # Create the notebook to hold the notes
-    notebook = ttk.Notebook(root, style="TNotebook")
+    notebook = ttk.Notebook(left_frame, style="TNotebook")
     notebook.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-    
     try:
         with open("notes.json", "r") as f:
             notes = json.load(f)
     except FileNotFoundError:
-        pass
+        notes = []
 
     # Load notes into the notebook
-    notes = load_notes(notebook)
+    load_notes(notebook)
 
-    # Add buttons to the main window
-    new_button = ttk.Button(root, text="New Note", 
-                            command=lambda: add_note(notebook, notes), style="info.TButton")
+    # Add buttons to the left frame
+    new_button = ttk.Button(left_frame, text="New Note", 
+                            command=lambda: add_note(notebook, notes), style="success.TButton")
     new_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-    delete_button = ttk.Button(root, text="Delete", 
-                            command=lambda: delete_note(notebook, notes), style="primary.TButton")
+    delete_button = ttk.Button(left_frame, text="Delete", 
+                            command=lambda: delete_note(notebook, notes), style="danger.TButton")
     delete_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-    save_button = ttk.Button(root, text="Save", 
-                            command=lambda: save_notes(notebook), style="secondary.TButton")
+    save_button = ttk.Button(left_frame, text="Save", 
+                            command=lambda: save_notes(notebook), style="light.TButton")
     save_button.pack(side=tk.LEFT, padx=10, pady=10)
 
+    markdown_button = ttk.Button(left_frame, text="Markdown", 
+                                command=lambda: show_markdown_frame(paned_window), style="info.TButton")
+    markdown_button.pack(side=tk.RIGHT, padx=10, pady=10)
+    
+    
     root.mainloop()
 
 if __name__ == "__main__":

@@ -2,11 +2,11 @@
 
 block_cipher = None
 
-a = Analysis(['test.py'],
+a = Analysis(['NoteApp.py'],
              pathex=['C:\\Users\\josh\\Documents\\GithubRepos\\PythonDesktopApps'], 
              binaries=[],
-             datas=[],
-             hiddenimports=['tkinter', 'ttk', 'tkinter.messagebox', 'json', 'ttkbootstrap'],
+             datas=[('notes.json', '.'), ('tools.py', '.')],
+             hiddenimports=['tkinter', 'ttk', 'tkinter.messagebox', 'json', 'ttkbootstrap', 'markdown'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -22,13 +22,15 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='test',
+          name='NoteApp',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True)
+          console=False,
+          output_mode='onefile'
+          )
 
 coll = COLLECT(exe,
                a.binaries,
@@ -37,4 +39,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='test')
+               name='NoteApp')

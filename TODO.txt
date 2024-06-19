@@ -1,0 +1,10 @@
+fix the displaying of markdown frame 
+clean up functions, move to tools, and maybe create more files for better organization.
+recompile as an exe
+add spell check
+add dictionary defs 
+
+manage data path for notes.json
+
+Ai features? 
+encryption
