@@ -2,6 +2,7 @@ import markdown
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox
+from logs import log
 
 
 def convert_to_HTML(text):
@@ -25,6 +26,8 @@ def add_note(notebook, notes):
     
     content_entry = tk.Text(note_frame, width=40, height=10)
     content_entry.grid(row=1, column=1, padx=10, pady=10)
+    log("Note added")
+
     
     # Create a function to save the note
     def save_note():
@@ -41,26 +44,31 @@ def add_note(notebook, notes):
         
         # Add the note to the notebook
         note_content = tk.Text(notebook, width=40, height=10, font=("TkDefaultFont", 25))
+
         note_content.insert(tk.END, content)
         notebook.forget(notebook.select())
         notebook.add(note_content, text=title)
-        
+        log("Note added")
     # Add a save button to the note frame
     save_button = ttk.Button(note_frame, text="Save", 
                             command=save_note, style="secondary.TButton")
     save_button.grid(row=2, column=1, padx=10, pady=10)
+    
 
 def load_notes(notebook):
     notes = {}
     try:
         with open("notes.json", "r") as f:
             notes = json.load(f)
-
+        num = 0
         for title, content in notes.items():
             # Add the note to the notebook
             note_content = tk.Text(notebook, width=40, height=10, font=("TkDefaultFont", 25))
             note_content.insert(tk.END, content)
             notebook.add(note_content, text=title)
+            
+            note_content.bind("<<Modified>>", lambda event, widget=note_content: on_text_modified(event, widget))
+        log("Notes loaded")
 
     except FileNotFoundError:
         # If the file does not exist, do nothing
@@ -89,31 +97,37 @@ def delete_note(notebook, notes):
         # Save the notes dictionary to the file
         with open("notes.json", "w") as f:
             json.dump(notes, f)
+        log("Note deleted")
 
 
 def save_notes(notebook):
     current_tab = notebook.index(notebook.select())
     note_title = notebook.tab(current_tab, option="text")
     
-    content_widget = notebook.nametowidget(notebook.select())
+    # Get the content widget (should be a tk.Text widget)
+    tab_id = notebook.select()
+    content_widget = notebook.nametowidget(tab_id)
     
-    note_content = content_widget.get("1.0", tk.END)
+    if isinstance(content_widget, tk.Text):
+        note_content = content_widget.get("1.0", tk.END)
+        
+        data = {}
     
-
+        try:
+            with open('notes.json', 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            pass
     
-    data = {}
-
-    try:
-        with open('notes.json', 'r') as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        pass
-
-    data[note_title] = note_content
+        data[note_title] = note_content
     
+        with open('notes.json', 'w') as file:
+            json.dump(data, file, indent=4)
+        
+        log("Notes saved")
+    else:
+        log("Error: Content widget is not a tk.Text widget")
 
-    with open('notes.json', 'w') as file:
-        json.dump(data, file, indent=4)
         
 def get_text(tab_index, notebook):
     current_tab = notebook.index(notebook.select())
@@ -123,3 +137,18 @@ def get_text(tab_index, notebook):
     note_content = content_widget.get("1.0", tk.END)
 
     return note_content
+
+def on_text_modified(event, widget):
+    # Handle the text modification event
+    log("Text modified")
+    
+    widget.edit_modified(False)
+    
+
+def on_tab_modified(notebook):
+    
+    # Handle the tab modification event
+    log("Tab modified")
+    save_notes(notebook)
+    
+    

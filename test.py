@@ -4,13 +4,21 @@ import json
 from ttkbootstrap import Style
 import markdown
 from tkhtmlview import HTMLLabel  # Import HTMLLabel from tkhtmlview
-from tools import add_note, load_notes, save_notes, delete_note, get_text
+from tools import add_note, load_notes, save_notes, delete_note, get_text, on_tab_modified
 
 # Global variable declaration
 frame_status = 1
 markdown_frame = None
 root = None
 notebook = None
+
+def on_text_modified(event, widget):
+    # Handle the text modification event
+    print("Text modified")
+    # Reset the modified flag to continue detecting future changes
+    widget.edit_modified(False)
+
+
 
 def render_markdown_content():
     global notebook, markdown_frame
@@ -31,6 +39,10 @@ def render_markdown_content():
         # Update HTMLLabel with new content
         html_label = HTMLLabel(markdown_frame, html=html_content)
         html_label.pack(fill=tk.BOTH, expand=True)
+
+def tab_event_handler(notebook, paned_window):
+    on_tab_modified(notebook)
+    show_markdown_frame(paned_window)
 
 def show_markdown_frame(paned_window):
     global frame_status, markdown_frame, root, notebook
@@ -83,7 +95,7 @@ def main():
     notebook.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
     # Bind the <<NotebookTabChanged>> event to render_markdown_content
-    notebook.bind("<<NotebookTabChanged>>", lambda event: show_markdown_frame(paned_window))
+    notebook.bind("<<NotebookTabChanged>>", lambda event: tab_event_handler(notebook, paned_window))
 
     try:
         with open("notes.json", "r") as f:
@@ -115,3 +127,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
