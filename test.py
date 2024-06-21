@@ -5,12 +5,38 @@ from ttkbootstrap import Style
 import markdown
 from tkhtmlview import HTMLLabel  # Import HTMLLabel from tkhtmlview
 from tools import add_note, load_notes, save_notes, delete_note, get_text, on_tab_modified
+from logs import log
+import os
+import sys
 
 # Global variable declaration
 frame_status = 1
 markdown_frame = None
 root = None
 notebook = None
+
+def init_notes():
+    # Determine the path to notes.json
+    if hasattr(sys, '_MEIPASS'):
+        # Running in a PyInstaller bundle
+        script_dir = sys._MEIPASS
+    else:
+        # Running in a normal Python environment
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    json_path = os.path.join(script_dir, 'notes.json')
+
+    # Check if notes.json exists
+    if not os.path.exists(json_path):
+        # If it does not exist, create the file and write an empty dictionary
+        with open(json_path, 'w') as f:
+            json.dump({}, f, indent=4)
+        log(f"Created {json_path}")
+    else:
+        log(f"{json_path} already exists")
+
+    return json_path
+
 
 def on_text_modified(event, widget):
     # Handle the text modification event
@@ -29,16 +55,27 @@ def render_markdown_content():
             widget.destroy()
         
         # Get current tab index and content
-        selected_tab = notebook.select()
-        tab_index = notebook.index(selected_tab)
-        markdown_content = get_text(tab_index, notebook)
+        
+        try :
+            selected_tab = notebook.select()
+            
+            tab_index = notebook.index(selected_tab)
+            markdown_content = get_text(tab_index, notebook)
+            
+        except tk.TclError:
+            log("Error: No tab selected")
+            markdown_content = ""
         
         # Render Markdown to HTML
-        html_content = markdown.markdown(markdown_content)
+        try:
+            html_content = markdown.markdown(markdown_content)
+        except AttributeError:
+            html_content = "<h1>Markdown Preview</h1><p>No content to preview</p>"
         
         # Update HTMLLabel with new content
         html_label = HTMLLabel(markdown_frame, html=html_content)
         html_label.pack(fill=tk.BOTH, expand=True)
+        
 
 def tab_event_handler(notebook, paned_window):
     on_tab_modified(notebook)
@@ -46,6 +83,7 @@ def tab_event_handler(notebook, paned_window):
 
 def show_markdown_frame(paned_window):
     global frame_status, markdown_frame, root, notebook
+    
     
     if frame_status == 0:
         # Hide frame and resize window to 500x500
@@ -71,6 +109,9 @@ def show_markdown_frame(paned_window):
 
 def main(): 
     global root, notebook
+    
+    init_notes()
+
     
     root = tk.Tk()
     root.title("Notes App")

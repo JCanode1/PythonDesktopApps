@@ -1,18 +1,90 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import json
 from ttkbootstrap import Style
-from tools import add_note, load_notes, save_notes, delete_note
 import markdown
 from tkhtmlview import HTMLLabel  # Import HTMLLabel from tkhtmlview
+from tools import add_note, load_notes, save_notes, delete_note, get_text, on_tab_modified
+from logs import log
+import os
+import sys
 
 # Global variable declaration
 frame_status = 1
-markdown_frame = None  # Declare the markdown_frame globally
+markdown_frame = None
+root = None
+notebook = None
+
+def init_notes():
+    # Determine the path to notes.json
+    if hasattr(sys, '_MEIPASS'):
+        # Running in a PyInstaller bundle
+        script_dir = sys._MEIPASS
+    else:
+        # Running in a normal Python environment
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    json_path = os.path.join(script_dir, 'notes.json')
+
+    # Check if notes.json exists
+    if not os.path.exists(json_path):
+        # If it does not exist, create the file and write an empty dictionary
+        with open(json_path, 'w') as f:
+            json.dump({}, f, indent=4)
+        log(f"Created {json_path}")
+    else:
+        log(f"{json_path} already exists")
+
+    return json_path
+
+
+def on_text_modified(event, widget):
+    # Handle the text modification event
+    print("Text modified")
+    # Reset the modified flag to continue detecting future changes
+    widget.edit_modified(False)
+
+
+
+def render_markdown_content():
+    global notebook, markdown_frame
+    
+    if markdown_frame:
+        # Clear previous content
+        for widget in markdown_frame.winfo_children():
+            widget.destroy()
+        
+        # Get current tab index and content
+        
+        try :
+            selected_tab = notebook.select()
+            
+            tab_index = notebook.index(selected_tab)
+            markdown_content = get_text(tab_index, notebook)
+            
+        except tk.TclError:
+            log("Error: No tab selected")
+            markdown_content = ""
+        
+        # Render Markdown to HTML
+        try:
+            html_content = markdown.markdown(markdown_content)
+        except AttributeError:
+            html_content = "<h1>Markdown Preview</h1><p>No content to preview</p>"
+        
+        # Update HTMLLabel with new content
+        html_label = HTMLLabel(markdown_frame, html=html_content)
+        html_label.pack(fill=tk.BOTH, expand=True)
+        
+
+def tab_event_handler(notebook, paned_window):
+    on_tab_modified(notebook)
+    show_markdown_frame(paned_window)
 
 def show_markdown_frame(paned_window):
-    global frame_status, markdown_frame, root, notebook  # Declare root as global
-
+    global frame_status, markdown_frame, root, notebook
+    
+    
     if frame_status == 0:
         # Hide frame and resize window to 500x500
         paned_window.forget(markdown_frame)
@@ -24,21 +96,8 @@ def show_markdown_frame(paned_window):
             markdown_frame = ttk.Frame(paned_window, width=500, height=500)
             markdown_frame.pack_propagate(False)
             
-            # Example markdown content
-            markdown_content = """
-            # Markdown Preview
-            This is a preview of **Markdown** content.
-
-            - Item 1
-            - Item 2
-            - Item 3
-
-            [Link](https://example.com)
-            """
-
-            html_content = markdown.markdown(markdown_content)
-            html_label = HTMLLabel(markdown_frame, html=html_content)
-            html_label.pack(fill=tk.BOTH, expand=True)
+        # Render markdown content whenever the frame is shown or tab changes
+        render_markdown_content()
         
         # Add the markdown frame to the paned_window if it's not already added
         if not any(frame is markdown_frame for frame in paned_window.panes()):
@@ -49,7 +108,10 @@ def show_markdown_frame(paned_window):
         frame_status = 0
 
 def main(): 
-    global root, right_frame, frame_status, notebook  # Declare all global variables used
+    global root, notebook
+    
+    init_notes()
+
     
     root = tk.Tk()
     root.title("Notes App")
@@ -72,6 +134,9 @@ def main():
     # Create the notebook to hold the notes
     notebook = ttk.Notebook(left_frame, style="TNotebook")
     notebook.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+    # Bind the <<NotebookTabChanged>> event to render_markdown_content
+    notebook.bind("<<NotebookTabChanged>>", lambda event: tab_event_handler(notebook, paned_window))
 
     try:
         with open("notes.json", "r") as f:
@@ -99,8 +164,9 @@ def main():
                                 command=lambda: show_markdown_frame(paned_window), style="info.TButton")
     markdown_button.pack(side=tk.RIGHT, padx=10, pady=10)
     
-    
     root.mainloop()
 
 if __name__ == "__main__":
     main()
+
+

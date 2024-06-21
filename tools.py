@@ -134,9 +134,12 @@ def get_text(tab_index, notebook):
 
     content_widget = notebook.nametowidget(notebook.select())
     
-    note_content = content_widget.get("1.0", tk.END)
-
-    return note_content
+    try:
+        note_content = content_widget.get("1.0", tk.END)
+        return note_content
+    except AttributeError:
+        log("Error: Content widget is not a tk.Text widget")
+        return None
 
 def on_text_modified(event, widget):
     # Handle the text modification event
@@ -149,6 +152,6 @@ def on_tab_modified(notebook):
     
     # Handle the tab modification event
     log("Tab modified")
-    save_notes(notebook)
+    #save_notes(notebook)
     
     
